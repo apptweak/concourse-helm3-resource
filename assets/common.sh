@@ -96,6 +96,7 @@ setup_aws_kubernetes() {
   aws_secret_access_key=$(jq -r '.source.aws_secret_access_key // ""' < $payload)
   aws_region=$(jq -r '.source.aws_region // ""' < $payload)
   aws_cluster_name=$(jq -r '.source.aws_cluster_name // ""' < $payload)
+  aws_role_arn=$(jq -r '.source.aws_role_arn // ""' < $payload)
 
   if [ -z "$aws_access_key_id" ] || [ -z "$aws_secret_access_key" ] || [ -z "$aws_region" ] || [ -z "$aws_cluster_name" ]; then
     echo "invalid payload for AWS EKS auth, please pass all required params"
@@ -108,7 +109,14 @@ setup_aws_kubernetes() {
   aws_secret_access_key=$aws_secret_access_key
   region=$aws_region" > ~/.aws/credentials
 
-  aws eks update-kubeconfig --region $aws_region --name $aws_cluster_name
+  extra_args=""
+  if [ ! -z "$aws_role_arn" ]; then
+    extra_args+=" --role-arn $aws_role_arn "
+  fi
+
+  aws eks update-kubeconfig --region $aws_region --name $aws_cluster_name $extra_args
+
+  aws configure list
 }
 
 setup_gcp_kubernetes() {
@@ -156,7 +164,7 @@ setup_helm() {
   # $1 is the name of the payload file
   # $2 is the name of the source directory
 
-  history_max=$(jq -r '.source.helm_history_max // "0"' < $1)
+  history_max=$(jq -r '.source.helm_history_max // "10"' < $1)
 
   helm_bin="helm"
 
