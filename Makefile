@@ -1,13 +1,16 @@
-PROJECT = concourse-helm3
-ID = YOUR_DOCKER_HOST_HERE/${PROJECT}
+PROJECT = helm3-resource
+ID = apptweakci/${PROJECT}
+TAG_VERSION := v$(shell cat VERSION)
 
 all: build push
 
 build:
-	docker build --tag ${ID}:release-candidate .
+	docker build --platform linux/x86_64 --tag ${ID}:${TAG_VERSION} .
 
 push:
-	docker push ${ID}
+	read --local --silent --prompt "Docker account's password: " passwd
+	echo "$passwd" | docker login --username apptweakci --password-stdin
+	docker push ${ID}:${TAG_VERSION}
 
 run:
 	docker run \

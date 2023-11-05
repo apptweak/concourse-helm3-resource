@@ -1,57 +1,57 @@
-FROM --platform=linux/amd64 alpine/helm:3.10.2
-LABEL maintainer "Yann David (@Typositoire) <davidyann88@gmail>"
+FROM alpine/helm:3.14.0
 
 # Versions for gcloud, kubectl, doctl, awscli
-ARG KUBERNETES_VERSION=1.21.5
+ARG KUBERNETES_VERSION=1.28.5
 ARG GCLOUD_VERSION=416.0.0
 ARG DOCTL_VERSION=1.57.0
 # https://pypi.org/project/awscli/
-ARG AWSCLI_VERSION=1.27.142
+ARG AWSCLI_VERSION=1.29.30
 ARG HELM_PLUGINS_TO_INSTALL="https://github.com/databus23/helm-diff"
 
 #gcloud path
-ENV PATH $PATH:/usr/local/gcloud/google-cloud-sdk/bin
+# ENV PATH $PATH:/usr/local/gcloud/google-cloud-sdk/bin
 
 #install packages
-RUN apk add --update --upgrade --no-cache jq bash curl git gettext libintl py-pip
+RUN apk add --update --upgrade --no-cache \
+        jq \
+        bash \
+        curl \
+        git \
+        gettext \
+        libintl \
+        python3 \
+        py3-pip;
+
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 #install kubectl
 RUN curl -sL -o /usr/local/bin/kubectl https://storage.googleapis.com/kubernetes-release/release/v${KUBERNETES_VERSION}/bin/linux/amd64/kubectl; \
-    chmod +x /usr/local/bin/kubectl
+    chmod +x /usr/local/bin/kubectl; \
+#install awscli
+    pip3 install --break-system-packages --no-cache-dir awscli==${AWSCLI_VERSION};
 
 #install gcloud
-RUN wget https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-sdk-${GCLOUD_VERSION}-linux-x86_64.tar.gz \
-    -O /tmp/google-cloud-sdk.tar.gz | bash
+# RUN wget https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-sdk-${GCLOUD_VERSION}-linux-x86_64.tar.gz \
+#     -O /tmp/google-cloud-sdk.tar.gz | bash
 
-#install awscli
-RUN pip install awscli==${AWSCLI_VERSION}
 
 # For use with gke-gcloud-auth-plugin below
 # see https://cloud.google.com/blog/products/containers-kubernetes/kubectl-auth-changes-in-gke
 # for details
-ENV USE_GKE_GCLOUD_AUTH_PLUGIN=True
+# ENV USE_GKE_GCLOUD_AUTH_PLUGIN=True
 
-RUN mkdir -p /usr/local/gcloud \
-    && tar -C /usr/local/gcloud -xvzf /tmp/google-cloud-sdk.tar.gz \
-    && /usr/local/gcloud/google-cloud-sdk/install.sh -q \
-    ## auth package is split out now, need explicit install
-    ## --quiet disables interactive prompts
-    && gcloud components install gke-gcloud-auth-plugin --quiet
+# RUN mkdir -p /usr/local/gcloud \
+#     && tar -C /usr/local/gcloud -xvzf /tmp/google-cloud-sdk.tar.gz \
+#     && /usr/local/gcloud/google-cloud-sdk/install.sh -q \
+#     ## auth package is split out now, need explicit install
+#     ## --quiet disables interactive prompts
+#     && gcloud components install gke-gcloud-auth-plugin --quiet
 
 #copy scripts
-ADD assets /opt/resource
+COPY assets /opt/resource
 
 #install plugins
-RUN for i in $(echo $HELM_PLUGINS_TO_INSTALL | xargs -n1); do helm plugin install $i; done
-
-#install kustomize
-RUN curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh"  | bash && \
-  install kustomize /usr/local/bin/kustomize
-
-#install doctl
-RUN curl -sL -o /tmp/doctl.tar.gz https://github.com/digitalocean/doctl/releases/download/v${DOCTL_VERSION}/doctl-${DOCTL_VERSION}-linux-amd64.tar.gz && \
-  tar -C /usr/local/bin -zxvf /tmp/doctl.tar.gz && \
-  chmod +x /usr/local/bin/doctl
+RUN for i in $(echo $HELM_PLUGINS_TO_INSTALL | xargs -n1); do helm plugin install "$i"; done
 
 COPY entrypoint.sh /entrypoint.sh
 

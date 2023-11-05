@@ -53,7 +53,7 @@ setup_kubernetes() {
           echo "missing cluster_ca or cluster_ca_base64"
           exit 1
         fi
-        
+
         kubectl config set-cluster default --server=$cluster_url --certificate-authority=$ca_path $tls_server_name
       fi
 
@@ -139,14 +139,14 @@ setup_gcp_kubernetes() {
       echo "$gcloud_service_account_key_file" >> /gcloud.json
       gcloud_path="/gcloud.json"
     fi
-    
+
     gcloud_service_account_name=($(cat $gcloud_path | jq -r ".client_email"))
     gcloud auth activate-service-account ${gcloud_service_account_name} --key-file $gcloud_path
     gcloud config set account ${gcloud_service_account_name}
   else
       echo "Workload Identity is enabled - no need to authenticate with a private key"
   fi
-  
+
   gcloud config set project ${gcloud_project_name}
   gcloud container clusters get-credentials ${gcloud_k8s_cluster_name} --zone ${gcloud_k8s_zone}
 
@@ -155,7 +155,6 @@ setup_gcp_kubernetes() {
 setup_helm() {
   # $1 is the name of the payload file
   # $2 is the name of the source directory
-
 
   history_max=$(jq -r '.source.helm_history_max // "0"' < $1)
 

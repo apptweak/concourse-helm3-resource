@@ -15,7 +15,7 @@ cat > $payload <&0
 
 # Prepare
 setup_resource $payload $source
-setup_repos $payload $source 
+setup_repos $payload $source
 echo "Resource setup successful."
 
 namespace=$(jq -r '.source.namespace // "default"' < $payload)
@@ -153,7 +153,7 @@ helm_upgrade() {
     upgrade_args+=("--wait")
     upgrade_args+=("--wait-for-jobs")
   elif [ "$check_is_ready" == "true" ]; then
-    upgrade_args+=("--wait")    
+    upgrade_args+=("--wait")
   fi
 
   if [ "$atomic" == "true" ]; then
@@ -264,13 +264,13 @@ helm_test() {
     echo "invalid payload (missing release if test=true)"
     exit 1
   fi
-  
+
   if [ "$debug" = true ]; then
     test_args+=("--debug")
   fi
-  
+
   test_args+=("--namespace=$namespace" "test" "$release" "--timeout=$timeout")
- 
+
   if [ "$test_logs" = true ] ; then
     test_args+=("--logs")
   fi
