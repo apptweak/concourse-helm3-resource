@@ -29,6 +29,8 @@ release_overwrite=$(jq -r '.params.release // ""' < $payload)
 values=$(jq -r '.params.values // "" | if type == "array" then .[] else . end' < $payload)
 debug=$(jq -r '.params.debug // "false"' < $payload)
 replace=$(jq -r '.params.replace // "false"' < $payload)
+rollout=$(jq -r '.params.rollout // "false"' < $payload)
+rollout_resources=$(jq -c '(try .params.rollout_resources[]? catch [][])' < $payload)
 uninstall=$(jq -r '.params.uninstall // "false"' < $payload)
 delete_namespace=$(jq -r '.params.delete_namespace // "false"' < $payload)
 test=$(jq -r '.params.test // "false"' < $payload)
@@ -45,7 +47,7 @@ wait_for_jobs=$(jq -r '.params.wait_for_jobs // "false"' < $payload)
 timeout=$(jq -r '.params.timeout // "5m0s"' < $payload)
 skip_missing_values=$(jq -r '.params.skip_missing_values // "false"' < $payload)
 
-if [[ "$test" == "false" ]] && [[ "$uninstall" == "false" ]] && [ -z "$chart" ] ; then
+if [[ "$test" == "false" ]] && [[ "$uninstall" == "false" ]] && [ -z "$chart" ] && [[ "$rollout" == "false" ]]; then
   echo "invalid payload (missing chart)"
   exit 1
 fi
@@ -62,6 +64,11 @@ fi
 
 if [[ "$uninstall" == "true" ]] && [[ "$replace" == "true" ]] ; then
   echo "invalid payload ( uninstall and replace cannot both be true )"
+  exit 1
+fi
+
+if [[ "$uninstall" == "true" ]] && [[ "$rollout" == "true" ]] ; then
+  echo "invalid payload ( uninstall and rollout cannot both be true )"
   exit 1
 fi
 
@@ -282,6 +289,39 @@ helm_test() {
   $helm_bin ${test_args[@]} | tee $logfile
 }
 
+kubectl_rollout() {
+  if [[ $rollout_resources ]]
+  then
+    logfile="/tmp/log"
+    mkdir -p /tmp
+
+    for res in $rollout_resources; do
+      extra_args=""
+      selector=$(echo $res | jq -cr '.selector // ""')
+      namespace=$(echo $res | jq -cr '.namespace // "default"')
+      component=$(echo $res | jq -cr '.component // ""')
+
+      if [[ -z $selector  && -z $component ]]; then
+        echo "invalid params for kubectl_rollout operation, please pass either a selector or namespace & component"
+        continue
+      fi
+
+      if [[ ! -z $component ]]; then
+        extra_args+=" $component "
+      fi
+
+      if [[ ! -z $selector ]]; then
+        extra_args+=" --selector=$selector "
+      fi
+
+      echo "Restarting namespace: ${namespace} | component: ${component} | extra_args: ${extra_args}"
+      kubectl --namespace $namespace rollout restart deployment $extra_args | tee "$logfile"
+      kubectl --namespace $namespace rollout status deployment $extra_args --timeout "$timeout" | tee "$logfile"
+    done
+  fi
+}
+
+
 if [ "$uninstall" = true ]; then
   helm_uninstall
 
@@ -302,6 +342,9 @@ elif [ "$replace" = true ]; then
   helm_upgrade
   result="$(jq -n "{version:{release:\"$release\", tested: \"true\"}, metadata: [{name: \"release\", value: \"$release\"}]}")"
   echo "$result" | jq -s add  >&3
+elif [ "$rollout" = true ]; then
+  kubectl_rollout
+  echo '{"version": {"revision": "N/A", "release": "N/A"}}' >&3
 else
   echo "Installing $release"
   helm_upgrade
