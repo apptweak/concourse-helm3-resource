@@ -301,6 +301,7 @@ kubectl_rollout() {
       namespace=$(echo $res | jq -cr '.namespace // "default"')
       component=$(echo $res | jq -cr '.component // ""')
       set_image=$(echo $res | jq -cr '.set_image // ""')
+      undo_on_fail=$(echo $res | jq -cr '.undo_on_fail // "false"')
 
       if [[ -z $selector && -z $component ]]; then
         echo "invalid params for kubectl_rollout operation, please pass either a selector or namespace & component"
@@ -317,7 +318,6 @@ kubectl_rollout() {
         continue
       fi
 
-      set -x
       if [[ ! -z $set_image ]]; then
         set_image=$(interpolate "$set_image" "$source")
       fi
@@ -333,11 +333,18 @@ kubectl_rollout() {
       echo "Restarting namespace: ${namespace} || component: ${component} || set_image: ${set_image} || extra_args: ${extra_args}"
 
       if [[ ! -z $set_image ]]; then
-        kubectl --namespace $namespace set image deployment "*=$set_image" $extra_args  | tee "$logfile"
+        kubectl --namespace $namespace set image deployment "*=$set_image" $extra_args | tee "$logfile"
       else
         kubectl --namespace $namespace rollout restart deployment $extra_args | tee "$logfile"
       fi
+
       kubectl --namespace $namespace rollout status deployment $extra_args --timeout "$timeout" | tee "$logfile"
+      wait_status=$?
+
+      if [[ "$undo_on_fail" = "true" && $wait_status != 0 ]]; then
+        kubectl --namespace $namespace rollout undo deployment $extra_args | tee "$logfile"
+        exit $wait_status
+      fi
     done
   fi
 }
