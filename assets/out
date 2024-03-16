@@ -300,10 +300,26 @@ kubectl_rollout() {
       selector=$(echo $res | jq -cr '.selector // ""')
       namespace=$(echo $res | jq -cr '.namespace // "default"')
       component=$(echo $res | jq -cr '.component // ""')
+      set_image=$(echo $res | jq -cr '.set_image // ""')
 
-      if [[ -z $selector  && -z $component ]]; then
+      if [[ -z $selector && -z $component ]]; then
         echo "invalid params for kubectl_rollout operation, please pass either a selector or namespace & component"
         continue
+      fi
+
+      if [[ -z $set_image && -z $selector ]]; then
+        echo "invalid params for kubectl_set_image operation, please pass either selector param. along the set_image param."
+        continue
+      fi
+
+      if [[ ! -z $set_image && ! -z $component ]]; then
+        echo "invalid params for kubectl operation, please pass either component or set_image"
+        continue
+      fi
+
+      set -x
+      if [[ ! -z $set_image ]]; then
+        set_image=$(interpolate "$set_image" "$source")
       fi
 
       if [[ ! -z $component ]]; then
@@ -314,8 +330,13 @@ kubectl_rollout() {
         extra_args+=" --selector=$selector "
       fi
 
-      echo "Restarting namespace: ${namespace} | component: ${component} | extra_args: ${extra_args}"
-      kubectl --namespace $namespace rollout restart deployment $extra_args | tee "$logfile"
+      echo "Restarting namespace: ${namespace} || component: ${component} || set_image: ${set_image} || extra_args: ${extra_args}"
+
+      if [[ ! -z $set_image ]]; then
+        kubectl --namespace $namespace set image deployment "*=$set_image" $extra_args  | tee "$logfile"
+      else
+        kubectl --namespace $namespace rollout restart deployment $extra_args | tee "$logfile"
+      fi
       kubectl --namespace $namespace rollout status deployment $extra_args --timeout "$timeout" | tee "$logfile"
     done
   fi

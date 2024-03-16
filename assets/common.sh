@@ -280,3 +280,42 @@ setup_doctl() {
 
   doctl kubernetes cluster kubeconfig save $doctl_cluster_id
 }
+
+# Function to interpolate placeholders in a text string
+interpolate() {
+  local text="$1" # The input text string
+  local source_dir="$2" # The directory where files referenced by input_text are located
+
+    # Replace placeholders with environment variable values
+    # This sed command looks for patterns like {{name}} and replaces them with the value of the $name environment variable
+    placeholder=$(echo "$text" | sed -E 's/\{\{(\$[A-Za-z_][A-Za-z0-9_]*)\}\}/\1/g')
+
+    # This sed command looks for patterns like {{filename}} and replaces them with the contents of the file specified by the placeholder
+    placeholder=$(echo "$placeholder" | sed -E 's/\{\{([A-Za-z_][A-Za-z0-9_/\-]*)\}\}/\1/g')
+    if [[ "$text" != "$placeholder" ]]; then
+      if echo "$placeholder" | grep -q "@"; then
+        image_repo=$(echo "$placeholder" | cut -d'@' -f1)
+        image_repo=$(get_file_contents "$source_dir/$image_repo")
+        image_digest=$(echo "$placeholder" | cut -d'@' -f2)
+        image_digest=$(get_file_contents "$source_dir/$image_digest")
+        placeholder="${image_repo}@${image_digest}"
+      else
+        placeholder=$(get_file_contents "$source_dir/$placeholder")
+      fi
+    fi
+    # Replace placeholders with file contents
+
+    echo "$placeholder" # Output the processed text
+  }
+
+# Function to read the contents of a file
+get_file_contents() {
+  local path="$1" # The path to the file to read
+  if [ -f "$path" ]; then
+    cat "$path" # Output the contents of the file
+  else
+    echo "Error: File '$path' not found" >&2 # Print an error message to stderr if the file does not exist
+    exit 1 # Exit the script with an error status
+  fi
+}
+
