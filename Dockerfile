@@ -1,11 +1,13 @@
-FROM --platform=linux/amd64 alpine/helm:3.10.2
+FROM --platform=linux/amd64 alpine/helm:3.13.3
+# Helm supported version along with K8 version: https://helm.sh/docs/topics/version_skew/
+
 LABEL maintainer="Yann David (@Typositoire) <davidyann88@gmail>"
 
 # Versions for gcloud, kubectl, doctl, awscli
-ARG KUBERNETES_VERSION=1.21.5
+# K8 versions: https://kubernetes.io/releases/
+ARG KUBERNETES_VERSION=1.27.11
 ARG GCLOUD_VERSION=416.0.0
 ARG DOCTL_VERSION=1.57.0
-# https://pypi.org/project/awscli/
 ARG AWSCLI_VERSION=1.31.10
 ARG HELM_PLUGINS_TO_INSTALL="https://github.com/databus23/helm-diff"
 
