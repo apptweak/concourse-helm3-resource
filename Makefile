@@ -1,19 +1,22 @@
-PROJECT = concourse-helm3
-ID = YOUR_DOCKER_HOST_HERE/${PROJECT}
-VERSION = $(shell cat VERSION)
-
+PROJECT = concourse-helm3-resource
+ID = apptweak/${PROJECT}
+ECR_REPO = ghcr.io
+TAG_VERSION := v$(shell cat VERSION)
 
 all: build push
 
 build:
-	docker build --tag ${ID}:$(VERSION) .
+	docker build --platform linux/x86_64 --tag ${ECR_REPO}/${ID}:${TAG_VERSION} .
 
 push:
-	docker push ${ID}:$(VERSION)
+	read --local --silent --prompt "Docker account's password: " gh_pat
+	echo "${gh_pat}"
+	# echo "${gh_pat}" | docker login "${ECR_REPO}" --username apptweakci --password-stdin
+	# docker push ${ECR_REPO}/${ID}:${TAG_VERSION}
 
 run:
 	docker run \
-		--volume $(shell pwd):/opt/helm-3 \
+		--volume $(pwd):/opt/helm-3 \
 		--workdir /opt/helm-3 \
 		--interactive \
 		--tty \
