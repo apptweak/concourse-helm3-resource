@@ -1,10 +1,11 @@
-FROM alpine/helm:3.14.0
-FROM --platform=linux/amd64 alpine/helm:3.10.2
+FROM --platform=linux/amd64 alpine/helm:3.14.0
 # Helm supported version along with K8 version: https://helm.sh/docs/topics/version_skew/
+
+LABEL org.opencontainers.image.source https://github.com/apptweak/concourse-helm3-resource
 
 # Versions for gcloud, kubectl, doctl, awscli
 # K8 versions: https://kubernetes.io/releases/
-ARG KUBERNETES_VERSION=1.28.5
+ARG KUBERNETES_VERSION=1.30.2
 ARG GCLOUD_VERSION=416.0.0
 ARG DOCTL_VERSION=1.57.0
 # https://pypi.org/project/awscli/
