@@ -1,7 +1,7 @@
 FROM --platform=linux/amd64 alpine/helm:3.13.3
 # Helm supported version along with K8 version: https://helm.sh/docs/topics/version_skew/
 
-LABEL maintainer="Yann David (@Typositoire) <davidyann88@gmail>"
+LABEL org.opencontainers.image.source https://github.com/apptweak/concourse-helm3-resource
 
 # Versions for gcloud, kubectl, doctl, awscli
 # K8 versions: https://kubernetes.io/releases/
