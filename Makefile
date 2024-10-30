@@ -9,6 +9,8 @@ build:
 	docker build --platform linux/x86_64 --tag ${ECR_REPO}/${ID}:${TAG_VERSION} .
 
 push:
+	# read --local --silent --prompt "Docker account's password: " passwd
+	# echo "$passwd" | docker login --username apptweakci --password-stdin
 	read --local --silent --prompt "Docker account's password: " gh_pat
 	echo "${gh_pat}"
 	# echo "${gh_pat}" | docker login "${ECR_REPO}" --username apptweakci --password-stdin

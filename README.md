@@ -123,6 +123,22 @@ Deploy an helm chart
 -   `show_diff`: _Optional._ Show the diff that is applied if upgrading an existing successful release. (Default: false)
 -   `skip_missing_values:` _Optional._ Missing values files are skipped if they are specified in the values but do not exist. (Default false)
 
+### `out`: Rollout deployment resources
+
+Rollout a specific deployment either based a selector or component name either by changing the Deplyment's image.
+
+
+-   `rollout`: **Optional** To run a `kubectl rollout restart` (Default: false)
+
+#### Parameters
+
+-   `rollout_resources`: **REQUIRED** List of resources parameters to restart (Default: [])
+  -  `namespace`: _Optional_ (Default: "default")
+  -  `component`: _Optional_ (Default: "")
+  -  `selector`: _Optional_ (Default: "")
+  -  `set_image`: _Optional_ (Default: "")
+  -  `undo_on_fail`: _Optional_ Exec `kubectl rollout undo` if the status of the rollout ends up as a failure (Default: false)
+
 ## Example
 
 ### Out
@@ -281,3 +297,20 @@ jobs:
       chart: oci://01234567890.dkr.ecr.us-west-2.amazonaws.com/myapp-helm-repo
   # ...
 ```
+
+Rollout `wordpress` components after pushing a new built-image to ECR
+
+```yaml
+jobs:
+  # ...
+  plan:
+  - put: myapp-helm
+    params:
+    rollout_resources:
+      - namespace: cms-wordpress
+        selector: app=wordpress
+        set_image: "{{docker-app/repository}}@{{docker-app/digest}}"
+  # ...
+```
+
+

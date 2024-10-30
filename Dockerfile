@@ -1,4 +1,4 @@
-FROM alpine/helm:3.14.0
+ROM alpine/helm:3.14.0
 # Helm supported version along with K8 version: https://helm.sh/docs/topics/version_skew/
 
 LABEL org.opencontainers.image.source=https://github.com/apptweak/concourse-helm3-resource
