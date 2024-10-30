@@ -23,17 +23,10 @@ Heavily based on the work of [`linkyard/concourse-helm-resource`][linkyard].
 - Most of those have been fixed with v1.25.0 available in GHCR only
 
 ## Docker Image
-You can pull the resource image from [`typositoire/concourse-helm3-resource`][dockerhub]. !["Dockerhub Pull Badge"](https://img.shields.io/docker/pulls/typositoire/concourse-helm3-resource.svg "Dockerhub Pull Badge")
 
-[dockerhub]: https://hub.docker.com/repository/docker/typositoire/concourse-helm3-resource
+[Orignal dockerhub]: https://hub.docker.com/repository/docker/typositoire/concourse-helm3-resource
 
-### DEPRECATION OF DOCKER HUB
-
-Starting with version 1.25.0, can you can no longer pull this resource from Docker Hub.
-
-Starting with version 1.19.1, you can pull the resource from Github [`ghcr.io/typositoire/concourse-helm3-resource`][github packages]. Docker hub will eventually stop receiving new images.
-
-[github packages]: https://github.com/Typositoire/concourse-helm3-resource/pkgs/container/concourse-helm3-resource
+You can find the built images on the AppTweak org's Packages page.
 
 ## Usage
 
@@ -65,25 +58,6 @@ resource_types:
 -   `tracing_enabled`: _Optional._ Enable extremely verbose tracing for this resource. Useful when developing the resource itself. May allow secrets to be displayed. (Default: false)
 -   `helm_setup_purge_all`: _Optional._ Uninstalls and purge every helm release. Use with extreme caution. (Default: false)
 
-## Source options for Google Cloud
-
--   `gcloud_cluster_auth`: _Optional._ Set to true to use gcloud service account file for kubernetes cluster authentication.
-
--   `gcloud_service_account_key_file`: _Optional_ Mandatory if `gcloud_cluster_auth` is set to true and `gcloud_workload_identity_enabled` is set to `false`. Pass gcloud service account json contents as value or a file path containing service_account json.
-
-- `gcloud_workload_identity_enabled`: _Optional_ Mandatory if `gcloud_cluster_auth` is set to true and `gcloud_service_account_key_file` is not set. Workload identity must be enabled on the cluster. (Default: `false`)
-
--   `gcloud_project_name`: _Optional_ Mandatory if `gcloud_cluster_auth` is set to true. Pass gcloud project name where cluster is installed.
-
--   `gcloud_k8s_cluster_name`: _Optional_ Mandatory if `gcloud_cluster_auth` is set to true. Pass gcloud cluster name.
-
--   `gcloud_k8s_zone`: _Optional_ Mandatory if `gcloud_cluster_auth` is set to true. Pass gcloud kubernetes cluster zone.
-
-## Source options for DigitalOcean
-
--   `digitalocean.cluster_id` _Optional._ ClusterID on digitalocean to fetch kubeconfig.
--   `digitalocean.access_token` _Optionl._ Read Access Token to fetch kubeconfig.
-
 ## Source options for AWS EKS
 
 -   `aws.region` _Optional._ Region of the EKS cluster
@@ -100,7 +74,7 @@ resource_types:
 
 ### `in`: Not Supported
 
-### `out`: Deploy a helm chart (V3 only)
+### `out`: Deploy a helm chart
 
 Deploy an helm chart
 
