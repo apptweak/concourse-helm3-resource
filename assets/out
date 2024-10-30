@@ -31,7 +31,6 @@ values=$(jq -r '.params.values // "" | if type == "array" then .[] else . end' <
 debug=$(jq -r '.params.debug // "false"' < $payload)
 replace=$(jq -r '.params.replace // "false"' < $payload)
 rollout=$(jq -r '.params.rollout // "false"' < $payload)
-rollout_resources=$(jq -c '(try .params.rollout_resources[]? catch [][])' < $payload)
 uninstall=$(jq -r '.params.uninstall // "false"' < $payload)
 delete_namespace=$(jq -r '.params.delete_namespace // "false"' < $payload)
 test=$(jq -r '.params.test // "false"' < $payload)
@@ -366,6 +365,8 @@ helm_test() {
 }
 
 kubectl_rollout() {
+  rollout_resources=$(jq -c '(try .params.rollout_resources[]? catch [][])' < $payload)
+
   if [[ $rollout_resources ]]
   then
     logfile="/tmp/log"
