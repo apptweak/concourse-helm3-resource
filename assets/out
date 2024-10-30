@@ -459,6 +459,10 @@ kubectl_trigger_cronjob() {
   job_name=$(echo "${job_name}-${job_name_suffix}" | tr '[:upper:]' '[:lower:]' | cut -c1-63)
 
   kubectl --namespace $namespace create job --from=cronjob/$from_cronjob $job_name
+
+  # if [ "$show_log" = true ]; then
+  #   kubectl logs --namespace $namespace --all-containers=true --follow job/$job_name
+  # fi
 }
 
 # support private registry
