@@ -1,7 +1,8 @@
-FROM --platform=linux/amd64 alpine/helm:3.14.0
+FROM alpine/helm:3.14.0
 # Helm supported version along with K8 version: https://helm.sh/docs/topics/version_skew/
 
-LABEL org.opencontainers.image.source https://github.com/apptweak/concourse-helm3-resource
+LABEL org.opencontainers.image.source=https://github.com/apptweak/concourse-helm3-resource
+LABEL org.opencontainers.image.description="Kubernetes & Helm Resource for Concourse"
 
 # Versions for gcloud, kubectl, doctl, awscli
 # K8 versions: https://kubernetes.io/releases/
