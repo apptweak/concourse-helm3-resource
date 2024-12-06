@@ -464,14 +464,14 @@ kubectl_trigger_cronjob() {
   EXIT_STATUS=$?
 
   if [ "$show_log" = true ]; then
-    echo "Wait for job's Pod to be Ready before showing logs"
-    kubectl wait --timeout 90s --for=condition=Ready --namespace $namespace pod -l job-name=$job_name
+    echo "Wait for job's Pod to be Ready before showing logs ..."
+    kubectl wait --timeout 5m --for=condition=Ready --namespace $namespace pod -l job-name=$job_name
     EXIT_STATUS=$?
     kubectl logs --namespace $namespace --all-containers=true --follow job/$job_name
   fi
 
   # Exit with the status of the create job or wait for logs
-  exit $EXIT_STATUS
+  return $EXIT_STATUS
 }
 
 # support private registry
@@ -505,6 +505,7 @@ elif [ "$rollout" = true ]; then
   echo '{"version": {"revision": "N/A", "release": "N/A"}}' >&3
 elif [ "$run_cron" = true ]; then
   kubectl_trigger_cronjob
+  echo '{"version": {"job_status": "Completed"}}' >&3
 else
   echo "Installing $release"
   helm_upgrade
