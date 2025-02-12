@@ -15,7 +15,7 @@ cat > $payload <&0
 
 # Prepare
 setup_resource $payload $source
-setup_repos $payload $source 
+setup_repos $payload $source
 echo "Resource setup successful."
 
 private_registry=$(jq -r '.params|has("private_registry")' < $payload)
@@ -30,6 +30,7 @@ release_overwrite=$(jq -r '.params.release // ""' < $payload)
 values=$(jq -r '.params.values // "" | if type == "array" then .[] else . end' < $payload)
 debug=$(jq -r '.params.debug // "false"' < $payload)
 replace=$(jq -r '.params.replace // "false"' < $payload)
+rollout=$(jq -r '.params.rollout // "false"' < $payload)
 uninstall=$(jq -r '.params.uninstall // "false"' < $payload)
 delete_namespace=$(jq -r '.params.delete_namespace // "false"' < $payload)
 test=$(jq -r '.params.test // "false"' < $payload)
@@ -46,7 +47,7 @@ wait_for_jobs=$(jq -r '.params.wait_for_jobs // "false"' < $payload)
 timeout=$(jq -r '.params.timeout // "5m0s"' < $payload)
 skip_missing_values=$(jq -r '.params.skip_missing_values // "false"' < $payload)
 
-if [[ "$test" == "false" ]] && [[ "$uninstall" == "false" ]] && [ -z "$chart" ] ; then
+if [[ "$test" == "false" ]] && [[ "$uninstall" == "false" ]] && [ -z "$chart" ] && [[ "$rollout" == "false" ]]; then
   echo "invalid payload (missing chart)"
   exit 1
 fi
@@ -63,6 +64,11 @@ fi
 
 if [[ "$uninstall" == "true" ]] && [[ "$replace" == "true" ]] ; then
   echo "invalid payload ( uninstall and replace cannot both be true )"
+  exit 1
+fi
+
+if [[ "$uninstall" == "true" ]] && [[ "$rollout" == "true" ]] ; then
+  echo "invalid payload ( uninstall and rollout cannot both be true )"
   exit 1
 fi
 
@@ -229,7 +235,7 @@ helm_upgrade() {
     upgrade_args+=("--wait")
     upgrade_args+=("--wait-for-jobs")
   elif [ "$check_is_ready" == "true" ]; then
-    upgrade_args+=("--wait")    
+    upgrade_args+=("--wait")
   fi
 
   if [ "$atomic" == "true" ]; then
@@ -340,13 +346,13 @@ helm_test() {
     echo "invalid payload (missing release if test=true)"
     exit 1
   fi
-  
+
   if [ "$debug" = true ]; then
     test_args+=("--debug")
   fi
-  
+
   test_args+=("--namespace=$namespace" "test" "$release" "--timeout=$timeout")
- 
+
   if [ "$test_logs" = true ] ; then
     test_args+=("--logs")
   fi
@@ -357,6 +363,69 @@ helm_test() {
   echo "Running command helm ${test_args[@]} | tee $logfile"
   $helm_bin ${test_args[@]} | tee $logfile
 }
+
+kubectl_rollout() {
+  rollout_resources=$(jq -c '(try .params.rollout_resources[]? catch [][])' < $payload)
+
+  if [[ $rollout_resources ]]
+  then
+    logfile="/tmp/log"
+    mkdir -p /tmp
+
+    for res in $rollout_resources; do
+      extra_args=""
+      selector=$(echo $res | jq -cr '.selector // ""')
+      namespace=$(echo $res | jq -cr '.namespace // "default"')
+      component=$(echo $res | jq -cr '.component // ""')
+      set_image=$(echo $res | jq -cr '.set_image // ""')
+      undo_on_fail=$(echo $res | jq -cr '.undo_on_fail // "false"')
+
+      if [[ -z $selector && -z $component ]]; then
+        echo "invalid params for kubectl_rollout operation, please pass either a selector or namespace & component"
+        continue
+      fi
+
+      if [[ -z $set_image && -z $selector ]]; then
+        echo "invalid params for kubectl_set_image operation, please pass either selector param. along the set_image param."
+        continue
+      fi
+
+      if [[ ! -z $set_image && ! -z $component ]]; then
+        echo "invalid params for kubectl operation, please pass either component or set_image"
+        continue
+      fi
+
+      if [[ ! -z $set_image ]]; then
+        set_image=$(interpolate "$set_image" "$source")
+      fi
+
+      if [[ ! -z $component ]]; then
+        extra_args+=" $component "
+      fi
+
+      if [[ ! -z $selector ]]; then
+        extra_args+=" --selector=$selector "
+      fi
+
+      echo "Restarting namespace: ${namespace} || component: ${component} || set_image: ${set_image} || extra_args: ${extra_args}"
+
+      if [[ ! -z $set_image ]]; then
+        kubectl --namespace $namespace set image deployment "*=$set_image" $extra_args | tee "$logfile"
+      else
+        kubectl --namespace $namespace rollout restart deployment $extra_args | tee "$logfile"
+      fi
+
+      kubectl --namespace $namespace rollout status deployment $extra_args --timeout "$timeout" | tee "$logfile"
+      wait_status=$?
+
+      if [[ "$undo_on_fail" = "true" && $wait_status != 0 ]]; then
+        kubectl --namespace $namespace rollout undo deployment $extra_args | tee "$logfile"
+        exit $wait_status
+      fi
+    done
+  fi
+}
+
 
 # support private registry
 if [ "${private_registry}" = true ]; then
@@ -384,6 +453,9 @@ elif [ "$replace" = true ]; then
   helm_upgrade
   result="$(jq -n "{version:{release:\"$release\", tested: \"true\"}, metadata: [{name: \"release\", value: \"$release\"}]}")"
   echo "$result" | jq -s add  >&3
+elif [ "$rollout" = true ]; then
+  kubectl_rollout
+  echo '{"version": {"revision": "N/A", "release": "N/A"}}' >&3
 else
   echo "Installing $release"
   helm_upgrade
