@@ -139,6 +139,19 @@ Rollout a specific deployment either based a selector or component name either b
   -  `set_image`: _Optional_ (Default: "")
   -  `undo_on_fail`: _Optional_ Exec `kubectl rollout undo` if the status of the rollout ends up as a failure (Default: false)
 
+### `out`: Trigger a cronjob
+
+Create a new Job based on an existing Cronjob
+
+#### Parameters
+
+-   `run_cron`: _Optional._ (Default: false)
+-   `from_cronjob`: **REQUIRED** Require that `run_cron` is set to true. The Cronjob name to create from. Will exit if it's not found.
+-   `job_name`: _Optional._ It will concatenated with `job_name_suffix` and cutted to 63 characters (RFC 1123 subdomain) (Default: `from_cronjob` value)
+-   `job_name_suffix`: _Optional._ Will be concatenated to the `job_name` param. (Default: `date %s`)
+-   `show_log`: _Optional._ [EXPERIMENTAL] Show the logs of the created job
+
+
 ## Example
 
 ### Out

@@ -47,7 +47,10 @@ wait_for_jobs=$(jq -r '.params.wait_for_jobs // "false"' < $payload)
 timeout=$(jq -r '.params.timeout // "5m0s"' < $payload)
 skip_missing_values=$(jq -r '.params.skip_missing_values // "false"' < $payload)
 
-if [[ "$test" == "false" ]] && [[ "$uninstall" == "false" ]] && [ -z "$chart" ] && [[ "$rollout" == "false" ]]; then
+run_cron=$(jq -r '.params.run_cron // "false"' < $payload)
+
+
+if [[ "$test" == "false" ]] && [[ "$uninstall" == "false" ]] && [ -z "$chart" ] && [[ "$rollout" == "false" ]] && [[ "$run_cron" == "false" ]]; then
   echo "invalid payload (missing chart)"
   exit 1
 fi
@@ -69,6 +72,11 @@ fi
 
 if [[ "$uninstall" == "true" ]] && [[ "$rollout" == "true" ]] ; then
   echo "invalid payload ( uninstall and rollout cannot both be true )"
+  exit 1
+fi
+
+if [[ "$uninstall" == "true" ]] && [[ "$run_cron" == "true" ]] ; then
+  echo "invalid payload ( uninstall and run_cron cannot both be true )"
   exit 1
 fi
 
@@ -426,6 +434,46 @@ kubectl_rollout() {
   fi
 }
 
+kubectl_trigger_cronjob() {
+  from_cronjob=$(jq -r '.params.from_cronjob // ""' < $payload)
+  job_name_suffix=$(jq -r '.params.job_name_suffix // ""' < $payload)
+  job_name=$(jq -r '.params.job_name // "default"' < $payload)
+  show_log=$(jq -r '.params.show_log // "false"' < $payload)
+
+  RESULT=`kubectl get cronjob --namespace=$namespace $from_cronjob 2> /dev/null || true`
+  if [ -z "$RESULT" ]; then
+    echo "Cronjob '$namespace/$from_cronjob' not found"
+    exit 1
+  fi
+
+  if [ -z "$job_name" ]; then
+    job_name="$from_cronjob"
+  else
+    job_name=$(echo $job_name | tr '_' '-')
+  fi
+
+  if [ -z "$job_name_suffix" ]; then
+    job_name_suffix=`date +%s`
+  fi
+
+  # The cronjob name must valid to the RFC 1123 subdomain
+  job_name=$(echo "${job_name}-${job_name_suffix}" | tr '[:upper:]' '[:lower:]' | cut -c1-63)
+
+  kubectl --namespace $namespace create job --from=cronjob/$from_cronjob $job_name
+  # Capture the exit status
+  EXIT_STATUS=$?
+
+  if [ "$show_log" = true ]; then
+    echo "Wait for job's Pod to be Ready before showing logs ..."
+    kubectl wait --timeout 5m --for=condition=Ready --namespace $namespace pod -l job-name=$job_name
+    EXIT_STATUS=$?
+    kubectl logs --namespace $namespace --all-containers=true --follow job/$job_name
+    EXIT_STATUS=$(kubectl get --namespace $namespace job/$job_name -o json | jq -r '.status.failed // 0')
+  fi
+
+  # Exit with the status of the create job or wait for logs
+  return $EXIT_STATUS
+}
 
 # support private registry
 if [ "${private_registry}" = true ]; then
@@ -456,6 +504,12 @@ elif [ "$replace" = true ]; then
 elif [ "$rollout" = true ]; then
   kubectl_rollout
   echo '{"version": {"revision": "N/A", "release": "N/A"}}' >&3
+elif [ "$run_cron" = true ]; then
+  kubectl_trigger_cronjob
+  return_status=$?
+  echo $return_status
+  echo '{"version": {"job_status": "Completed"}}' >&3
+  # exit $return_status
 else
   echo "Installing $release"
   helm_upgrade
