@@ -1,0 +1,70 @@
+name: Check for version Bump
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  verify-version-bump:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get changed files
+        id: changed-files
+        uses: tj-actions/changed-files@v44
+        with:
+          files_ignore: |
+            README.md
+            ci/**
+            .github/**
+      - name: List all changed files
+        id: list_changed_files
+        env:
+          ALL_CHANGED_FILES: ${{ steps.changed-files.outputs.all_changed_files }}
+          ALL_MODIFIED_FILES_COUNT: ${{ steps.changed-files.outputs.all_modified_files_count }}
+        run: |
+          echo "${ALL_MODIFIED_FILES_COUNT} files"
+          for file in ${ALL_CHANGED_FILES}; do
+            echo "$file was changed"
+          done
+      - name: auto_pass
+        if: steps.changed-files.outputs.all_modified_files_count == '0'
+        id: check_if_only_ignored
+        run: |
+          echo "Version bump not required." > comment.txt
+          exit 0
+        
+      - name: Get version from file
+        if: steps.changed-files.outputs.all_modified_files_count != '0'
+        id: get_version
+        run: echo "version=$(cat VERSION)" >> $GITHUB_OUTPUT
+
+      - name: 'Get Previous tag'
+        if: steps.changed-files.outputs.all_modified_files_count != '0'
+        id: previoustag
+        uses: "WyriHaximus/github-action-get-previous-tag@v1.4.0"
+
+      - name: Checking for version bump
+        if: steps.changed-files.outputs.all_modified_files_count != '0'
+        id: check_vbump
+        run: |
+          LAST_TAG="${{ steps.previoustag.outputs.tag }}"
+          NEW_TAG="v${{ steps.get_version.outputs.version }}"
+          RESULT=$(ci/assets/checksemver.sh ${NEW_TAG} ${LAST_TAG})
+          echo "============================================"
+          if [ "${RESULT}" == "1" ]; then
+            echo "Version bump found."
+            exit 0
+          elif [ "${RESULT}" == "0" ]; then
+            echo "Version bump did not happen. ${LAST_TAG} is the same as ${NEW_TAG}"
+            exit 1
+          else
+            echo "Version bump did not happen. ${LAST_TAG} is higher than ${NEW_TAG}"
+            exit 1
+          fi
+          echo "============================================"

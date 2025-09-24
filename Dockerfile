@@ -1,17 +1,19 @@
-FROM alpine/helm:3.14.0
+FROM --platform=linux/amd64 alpine/helm:3.16.4
 # Helm supported version along with K8 version: https://helm.sh/docs/topics/version_skew/
+# List of Helm images: https://hub.docker.com/r/alpine/helm/tags
 
 LABEL org.opencontainers.image.source=https://github.com/apptweak/concourse-helm3-resource
 LABEL org.opencontainers.image.description="Kubernetes & Helm Resource for Concourse"
 
 # Versions for gcloud, kubectl, doctl, awscli
 # K8 versions: https://kubernetes.io/releases/
-ARG KUBERNETES_VERSION=1.30.2
-ARG GCLOUD_VERSION=416.0.0
+ARG KUBERNETES_VERSION=1.31.7
+# gcloud version: https://cloud.google.com/sdk/docs/release-notes
+ARG GCLOUD_VERSION=500.0.0
 ARG DOCTL_VERSION=1.57.0
-# https://pypi.org/project/awscli/
-ARG AWSCLI_VERSION=1.31.10
+ARG AWSCLI_VERSION=2.13.25-r0
 ARG HELM_PLUGINS_TO_INSTALL="https://github.com/databus23/helm-diff"
+
 
 #gcloud path
 # ENV PATH $PATH:/usr/local/gcloud/google-cloud-sdk/bin
@@ -25,15 +27,14 @@ RUN apk add --update --upgrade --no-cache \
         gettext \
         libintl \
         python3 \
-        py3-pip;
+        py3-pip \
+        aws-cli=${AWSCLI_VERSION};
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 #install kubectl
 RUN curl -sL -o /usr/local/bin/kubectl https://storage.googleapis.com/kubernetes-release/release/v${KUBERNETES_VERSION}/bin/linux/amd64/kubectl; \
-    chmod +x /usr/local/bin/kubectl; \
-#install awscli
-    pip3 install --break-system-packages --no-cache-dir awscli==${AWSCLI_VERSION};
+    chmod +x /usr/local/bin/kubectl;
 
 #install gcloud
 # RUN wget https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-sdk-${GCLOUD_VERSION}-linux-x86_64.tar.gz \

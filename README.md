@@ -1,16 +1,10 @@
-# IMPORTANT
-
-https://github.com/Typositoire/concourse-helm3-resource/issues/102
-
 # Helm Resource for Concourse
 
 ![CI Build](https://concourse.pubb-it.com/api/v1/teams/main/pipelines/concourse-helm3-resource/jobs/build-image-tag/badge)
 
 Deploy [Helm Charts](https://github.com/helm/helm) from [Concourse](https://concourse-ci.org/).
 
-Heavily based on the work of [`linkyard/concourse-helm-resource`][linkyard].
-
-[linkyard]: https://github.com/linkyard/concourse-helm-resource
+Heavily based on the work of [`linkyard/concourse-helm-resource`](https://github.com/linkyard/concourse-helm-resource).
 
 ## IMPORTANT NOTES
 
@@ -24,9 +18,17 @@ Heavily based on the work of [`linkyard/concourse-helm-resource`][linkyard].
 
 ## Docker Image
 
-[Orignal dockerhub]: https://hub.docker.com/repository/docker/typositoire/concourse-helm3-resource
+You can pull the resource image from [`apptweakci/helm3-resource`][dockerhub]. !["Dockerhub Pull Badge"](https://img.shields.io/docker/pulls/apptweakci/helm3-resourcee.svg "Dockerhub Pull Badge")
 
-You can find the built images on the AppTweak org's Packages page.
+[Orignal dockerhub]: https://hub.docker.com/repository/docker/apptweakci/helm3-resourcee
+
+### DEPRECATION OF DOCKER HUB
+
+Starting with version 1.25.0, can you can no longer pull this resource from Docker Hub.
+
+Starting with version 1.32.0, you can pull the resource from GitHub [`ghcr.io/apptweak/concourse-helm3-resource`][GitHub Packages]. Docker hub will eventually stop receiving new images.
+
+[github packages]: https://github.com/apptweak/concourse-helm3-resource/pkgs/container/concourse-helm3-resource
 
 ## Usage
 
@@ -57,6 +59,7 @@ resource_types:
 -   `stable_repo`: _Optional_ A `"false"` (must be "string" not boolean) value will disable using a default Helm stable repo. Any other value will be used to Override default Helm stable repo URL <https://charts.helm.sh/stable>. Useful if running helm deploys without internet access.
 -   `tracing_enabled`: _Optional._ Enable extremely verbose tracing for this resource. Useful when developing the resource itself. May allow secrets to be displayed. (Default: false)
 -   `helm_setup_purge_all`: _Optional._ Uninstalls and purge every helm release. Use with extreme caution. (Default: false)
+  - `env_vars`: _Optional._ A key/value pair of environment variables that will be set before running the helm command. This is useful for using different Helm storage options.
 
 ## Source options for AWS EKS
 
@@ -67,6 +70,7 @@ resource_types:
 -   `aws.role.session_name` _Optional._ Session name of the assume-role session
 -   `aws.user.access_key_id` _Optional._ Access key id of the user credential used for EKS authentication
 -   `aws.user.secret_access_key` _Optional._ Secret access key of the user credential used for EKS authentication
+-   `aws.user.role_arn` _Optional._ If this is provided, we will use the user credentials to assume into the role
 
 ## Behavior
 
@@ -97,7 +101,7 @@ Deploy an helm chart
     the file in that path. A `hide: true` parameter ensures that the value is not logged and instead replaced with `***HIDDEN***`.
     A `type: string` parameter makes sure Helm always treats the value as a string (uses the `--set-string` option to Helm; useful if the value varies
     and may look like a number, eg. if it's a Git commit hash).
-    A `type: file` parameter makes Helm treats the `path` as file (uses the `--set-file` option to Helm). 
+    A `type: file` parameter makes Helm treats the `path` as file (uses the `--set-file` option to Helm).
     A `verbatim: true` parameter escapes backslashes so the value is passed as-is to the Helm chart (useful for `((credentials))`).
     The default behaviour of backslashes in `--set` is to quote the next character so `val\ue` is treated as `value` by Helm.
 -   `token_path`: _Optional._ Path to file containing the bearer token for Kubernetes.  This, 'token' or `admin_key`/`admin_cert` are required if `cluster_url` is https.
@@ -121,7 +125,8 @@ Deploy an helm chart
 -   `kubeconfig`: _Optional._ String containing a kubeconfig. Overrides `kubeconfig_path` and source configuration for cluster, token, and admin config.
 -   `kubeconfig_path`: _Optional._ File containing a kubeconfig. Overrides source configuration for cluster, token, and admin config.
 -   `show_diff`: _Optional._ Show the diff that is applied if upgrading an existing successful release. (Default: false)
--   `skip_missing_values:` _Optional._ Missing values files are skipped if they are specified in the values but do not exist. (Default false)
+-   `diff_opts`: _Optional._ Additional options to be appended to `helm diff` command. (Default: "")
+-   `skip_missing_values:` _Optional._ Missing values files are skipped if they are specified in the values but do not exist.(Default false)
 
 ### `out`: Rollout deployment resources
 
@@ -172,6 +177,9 @@ resources:
     repos:
       - name: some_repo
         url: https://somerepo.github.io/charts
+    env_vars:
+      HELM_DRIVER: sql
+      HELM_DRIVER_SQL_CONNECTION_STRING: postgresql://helm-postgres:5432/helm?user=helm&password=changeme
 ```
 
 DigitalOcean
@@ -256,7 +264,7 @@ jobs:
         path: version/image_tag # Read value from version/number
         type: string            # Make sure it's interpreted as a string by Helm (not a number)
       - key: configuration
-        path: configuration/production.yaml # add path to --set-file helm option 
+        path: configuration/production.yaml # add path to --set-file helm option
         type: file            # use --set-file helm option ( --set-file configuration=configuration/production.yaml )
   # ...
 ```
@@ -326,4 +334,23 @@ jobs:
   # ...
 ```
 
-
+If `helm` chart contains `lookup` function
+```yaml
+resources:
+- name: myapp-helm
+  type: helm
+  source:
+    env_vars:
+      HELM_DIFF_USE_INSECURE_SERVER_SIDE_DRY_RUN: true
+    #...
+jobs:
+  # ...
+  plan:
+  - put: myapp-helm
+    params:
+      chart: ...
+      show_diff: true
+      diff_opts: "--dry-run=server"
+      # ...
+  # ...
+```

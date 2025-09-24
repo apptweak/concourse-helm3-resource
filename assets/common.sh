@@ -120,7 +120,7 @@ setup_aws_kubernetes() {
       echo "invalid role arn for AWS EKS"
       exit 1
     fi
-    # `aws eks update-kubeconfig --role-arn` only populates the `role-arn` to be used 
+    # `aws eks update-kubeconfig --role-arn` only populates the `role-arn` to be used
     # for `get-token`, and the role specified is not used for the initial describe cluster action
     # name-based discovery is limited to same account as whatever profile is being used.
     # additional functionality added to assume the same specified role in order to discover the cluster
@@ -137,13 +137,14 @@ setup_aws_kubernetes() {
 
     access_key_id=$(jq -r '.source.aws.user.access_key_id // ""' < $payload)
     secret_access_key=$(jq -r '.source.aws.user.secret_access_key // ""' < $payload)
+    role_arn=$(jq -r '.source.aws.user.role_arn // ""' < $payload)
 
     if [ -z "$access_key_id" ] || [ -z "$secret_access_key" ]; then
       echo "invalid user auth payload for AWS EKS, please pass all required params"
       exit 1
     fi
 
-    # user credentail will be persisted on the disk under a specific profile
+    # user credentials will be persisted on the disk under a specific profile
     # in order to call `aws eks get-token`
     mkdir -p ~/.aws
     echo "[${profile:-default}]
@@ -151,7 +152,17 @@ setup_aws_kubernetes() {
     aws_secret_access_key=${secret_access_key}
     region=${region}" > ~/.aws/credentials
 
-    aws eks update-kubeconfig --region ${region} --name ${cluster_name} ${profile_opt}
+    # If the role arn is provided, we will create a separate profile for the role.
+    if [ -n "$role_arn" ]; then
+      echo "[assume_role]
+      role_arn=${role_arn}
+      source_profile=${profile:-default}" >> ~/.aws/credentials
+
+      aws eks update-kubeconfig --region ${region} --name ${cluster_name} --profile assume_role
+    else
+      aws eks update-kubeconfig --region ${region} --name ${cluster_name} ${profile_opt}
+    fi
+
   else
     # defaults to use instance identity.
     echo "no role or user specified. Fallback to use identity of the instance e.g. instance profile) to set up kubeconfig"
@@ -205,12 +216,20 @@ setup_gcp_kubernetes() {
 setup_helm() {
   # $1 is the name of the payload file
   # $2 is the name of the source directory
-
   history_max=$(jq -r '.source.helm_history_max // "10"' < $1)
 
   helm_bin="helm"
 
   $helm_bin version
+
+  # Are there any environment variables? If so, let's iterate over and them set it.
+  env_vars=$(jq -c '.source.env_vars // {}' < "$1")
+  if [ "$env_vars" != "{}" ]; then
+    for key in $(echo "$env_vars" | jq -r 'keys[]'); do
+      value=$(echo "$env_vars" | jq -r --arg key "$key" '.[$key]')
+      export "$key"="$value"
+    done
+  fi
 
   helm_setup_purge_all=$(jq -r '.source.helm_setup_purge_all // "false"' <$1)
   if [ "$helm_setup_purge_all" = "true" ]; then
@@ -360,4 +379,3 @@ get_file_contents() {
     exit 1 # Exit the script with an error status
   fi
 }
-
