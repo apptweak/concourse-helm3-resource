@@ -18,7 +18,7 @@ resources:
     check_every: 24h
     webhook_token: ((github.webhook_token))
     source:
-      repository: typositoire/concourse-helm3-resource
+      repository: apptweak/concourse-helm3-resource
       access_token: ((github.access_token))
 
   - name: main-version
@@ -26,21 +26,21 @@ resources:
     source:
       paths:
         - VERSION
-      uri: git@github.com:typositoire/concourse-helm3-resource.git
+      uri: git@github.com:apptweak/concourse-helm3-resource.git
       branch: main
       private_key: ((github.deploy_key))
 
   - name: main-version-write
     type: git
     source:
-      uri: git@github.com:typositoire/concourse-helm3-resource.git
+      uri: git@github.com:apptweak/concourse-helm3-resource.git
       branch: main
       private_key: ((github.deploy_key))
 
   - name: main-tags
     type: git
     source:
-      uri: git@github.com:typositoire/concourse-helm3-resource.git
+      uri: git@github.com:apptweak/concourse-helm3-resource.git
       branch: main
       private_key: ((github.deploy_key))
       tag_filter: "v*.*.*"
@@ -48,7 +48,7 @@ resources:
   - name: resource-image-gh
     type: registry-image
     source:
-      repository: ghcr.io/typositoire/concourse-helm3-resource
+      repository: ghcr.io/apptweak/concourse-helm3-resource
       username: typositoire
       password: ((github.access_token))
       tag: latest

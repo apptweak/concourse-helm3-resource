@@ -3,7 +3,7 @@ name: Check for version Bump
 on:
   pull_request:
     branches:
-      - main
+      - main-apptweak
 
 jobs:
   verify-version-bump:
@@ -38,7 +38,7 @@ jobs:
         run: |
           echo "Version bump not required." > comment.txt
           exit 0
-        
+
       - name: Get version from file
         if: steps.changed-files.outputs.all_modified_files_count != '0'
         id: get_version

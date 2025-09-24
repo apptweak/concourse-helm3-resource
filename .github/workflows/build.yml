@@ -36,5 +36,5 @@ jobs:
           context: .
           push: true
           tags: |
-            ghcr.io/typositoire/concourse-helm3-resource:${{ steps.set_docker_tag.outputs.tag }}
-            ghcr.io/typositoire/concourse-helm3-resource:latest
+            ghcr.io/apptweak/concourse-helm3-resource:${{ steps.set_docker_tag.outputs.tag }}
+            ghcr.io/apptweak/concourse-helm3-resource:latest

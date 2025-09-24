@@ -37,7 +37,7 @@ resource_types:
 - name: helm
   type: docker-image
   source:
-    repository: ghcr.io/typositoire/concourse-helm3-resource
+    repository: ghcr.io/apptweak/concourse-helm3-resource
 ```
 
 ## Source Configuration

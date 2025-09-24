@@ -3,7 +3,7 @@ name: Tag Main
 on:
   push:
     branches:
-      - main
+      - main-apptweak
     paths:
       - VERSION
   workflow_dispatch:  # Enable manual triggering
