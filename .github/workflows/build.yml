@@ -1,14 +1,18 @@
 name: Create and publish a Docker image
 
 on:
-  push:
-    tags:
-      - 'v*.*.*'
-  workflow_dispatch:  # Enable manual triggering
+  workflow_call:
     inputs:
       tag:
-        description: 'Docker image tag'
-        required: false
+        description: Docker image tag
+        required: true
+        type: string
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Docker image tag
+        required: true
+        type: string
 
 jobs:
   build-and-push-image:
@@ -25,16 +29,11 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Set Docker image tag
-        id: set_docker_tag
-        run: echo "tag=${{ github.event.inputs.tag || github.ref_name }}" >> $GITHUB_OUTPUT
-        continue-on-error: true
-        shell: bash
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
           context: .
           push: true
           tags: |
-            ghcr.io/apptweak/concourse-helm3-resource:${{ steps.set_docker_tag.outputs.tag }}
-            ghcr.io/apptweak/concourse-helm3-resource:latest
+            ghcr.io/apptweak/concourse-helm3-resource:${{ inputs.tag }}
+            ghcr.io/apptweak/concourse-helm3-resource:stable
