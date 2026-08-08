@@ -128,6 +128,7 @@ helm_registry_login() {
       echo "use role to authenticate with ECR."
       role_arn=$(jq -r '.params.private_registry.ecr.role.arn // ""' < $payload)
       role_session_name=$(jq -r '.params.private_registry.ecr.role.session_name // ""' < $payload)
+      web_identity_token=$(jq -r '.params.private_registry.ecr.role.web_identity_token // ""' < $payload)
       echo "role_arn=${role_arn} role_session_name=${role_session_name}"
 
       if [ -z "${role_arn}" ]; then
@@ -135,12 +136,29 @@ helm_registry_login() {
         exit 1
       fi
 
-      $(printf "env AWS_ACCESS_KEY_ID=%s AWS_SECRET_ACCESS_KEY=%s AWS_SESSION_TOKEN=%s" \
-      $(aws sts assume-role \
-      --role-arn ${role_arn} \
-      --role-session-name ${role_session_name:-ECRAssumeRoleSession} \
-      --query "Credentials.[AccessKeyId,SecretAccessKey,SessionToken]" \
-      --output text)) aws ecr get-login-password --region ${region} | helm registry login --username AWS --password-stdin ${account_id}.dkr.ecr.${region}.amazonaws.com
+      if [ -n "${web_identity_token}" ]; then
+        echo "proceed with assume-role-with-web-identity to authenticate with ECR."
+        web_identity_file=$(mktemp /tmp/aws_ecr_web_identity_token.XXXXXX)
+        echo "${web_identity_token}" > "${web_identity_file}"
+        chmod 600 "${web_identity_file}"
+
+        $(printf "env AWS_ACCESS_KEY_ID=%s AWS_SECRET_ACCESS_KEY=%s AWS_SESSION_TOKEN=%s" \
+        $(aws sts assume-role-with-web-identity \
+        --role-arn ${role_arn} \
+        --role-session-name ${role_session_name:-ECRAssumeRoleSession} \
+        --web-identity-token file://${web_identity_file} \
+        --query "Credentials.[AccessKeyId,SecretAccessKey,SessionToken]" \
+        --output text)) aws ecr get-login-password --region ${region} | helm registry login --username AWS --password-stdin ${account_id}.dkr.ecr.${region}.amazonaws.com
+
+        rm -f "${web_identity_file}"
+      else
+        $(printf "env AWS_ACCESS_KEY_ID=%s AWS_SECRET_ACCESS_KEY=%s AWS_SESSION_TOKEN=%s" \
+        $(aws sts assume-role \
+        --role-arn ${role_arn} \
+        --role-session-name ${role_session_name:-ECRAssumeRoleSession} \
+        --query "Credentials.[AccessKeyId,SecretAccessKey,SessionToken]" \
+        --output text)) aws ecr get-login-password --region ${region} | helm registry login --username AWS --password-stdin ${account_id}.dkr.ecr.${region}.amazonaws.com
+      fi
       # assumed role credentail will **NOT** be persisted on the disk
     elif [ "${use_user_base_auth}" = true ]; then
       echo "use user credentials to authenticate with ECR."
