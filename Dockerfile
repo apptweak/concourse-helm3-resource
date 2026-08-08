@@ -12,6 +12,7 @@ ARG KUBERNETES_VERSION=1.36.3
 ARG GCLOUD_VERSION=500.0.0
 ARG DOCTL_VERSION=1.57.0
 ARG AWSCLI_VERSION=2.35.24-r0
+ARG HELM_DIFF_VERSION=v3.9.14
 ARG HELM_PLUGINS_TO_INSTALL="https://github.com/databus23/helm-diff"
 
 
@@ -60,7 +61,7 @@ RUN curl -sL -o /usr/local/bin/kubectl https://storage.googleapis.com/kubernetes
 COPY assets /opt/resource
 
 #install plugins
-RUN for i in $(echo $HELM_PLUGINS_TO_INSTALL | xargs -n1); do helm plugin install "$i"; done
+RUN for i in $(echo $HELM_PLUGINS_TO_INSTALL | xargs -n1); do helm plugin install "$i" --version "$HELM_DIFF_VERSION"; done
 
 COPY entrypoint.sh /entrypoint.sh
 
