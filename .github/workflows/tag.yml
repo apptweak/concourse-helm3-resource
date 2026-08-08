@@ -1,4 +1,4 @@
-name: Tag Main
+name: Release AppTweak image
 
 on:
   push:
@@ -6,24 +6,55 @@ on:
       - main-apptweak
     paths:
       - VERSION
-  workflow_dispatch:  # Enable manual triggering
+  workflow_dispatch:
     inputs:
       tag:
-        description: 'Version to tag (without the prefix v)'
+        description: Version to release (without the prefix v)
         required: false
+
+permissions:
+  contents: write
+  packages: write
+
 jobs:
   tag:
     runs-on: ubuntu-latest
+    outputs:
+      image_tag: ${{ steps.version.outputs.image_tag }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-      - name: Get version from file
-        id: get_version
-        run: echo "version=$(cat VERSION)" >> $GITHUB_OUTPUT
-      - name: Create tag
-        id: create_tag
+        with:
+          fetch-depth: 0
+      - name: Resolve release version
+        id: version
+        env:
+          REQUESTED_VERSION: ${{ inputs.tag }}
+        run: |
+          VERSION="${REQUESTED_VERSION:-$(cat VERSION)}"
+          VERSION="${VERSION#v}"
+          echo "image_tag=v${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "git_tag=apptweak-v${VERSION}" >> "$GITHUB_OUTPUT"
+      - name: Create AppTweak tag
+        env:
+          GIT_TAG: ${{ steps.version.outputs.git_tag }}
         run: |
           git config user.name "GitHub Actions"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git tag -a v${{ github.event.inputs.tag || steps.get_version.outputs.version }} -m "Tagging version v${{ github.event.inputs.tag || steps.get_version.outputs.version }}"
-          git push origin v${{ github.event.inputs.tag || steps.get_version.outputs.version }}
+          if git rev-parse --verify --quiet "refs/tags/${GIT_TAG}"; then
+            if [ "$(git rev-list -n 1 "${GIT_TAG}")" != "$(git rev-parse HEAD)" ]; then
+              echo "${GIT_TAG} already points to another commit."
+              exit 1
+            fi
+            echo "${GIT_TAG} already points to this commit."
+          else
+            git tag -a "${GIT_TAG}" -m "Release ${GIT_TAG}"
+            git push origin "${GIT_TAG}"
+          fi
+
+  release:
+    needs: tag
+    uses: ./.github/workflows/build.yml
+    with:
+      tag: ${{ needs.tag.outputs.image_tag }}
+    secrets: inherit
