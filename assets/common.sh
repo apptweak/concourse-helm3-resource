@@ -114,22 +114,41 @@ setup_aws_kubernetes() {
     echo "proceed with assume-role to set up kubeconfig."
     role_arn=$(jq -r '.source.aws.role.arn // ""' < $payload)
     role_session_name=$(jq -r '.source.aws.role.session_name // ""' < $payload)
+    web_identity_token=$(jq -r '.source.aws.role.web_identity_token // ""' < $payload)
 
     echo "role_arn=${role_arn} role_session_name=${role_session_name}"
     if [ -z "${role_arn}" ]; then
       echo "invalid role arn for AWS EKS"
       exit 1
     fi
-    # `aws eks update-kubeconfig --role-arn` only populates the `role-arn` to be used
-    # for `get-token`, and the role specified is not used for the initial describe cluster action
-    # name-based discovery is limited to same account as whatever profile is being used.
-    # additional functionality added to assume the same specified role in order to discover the cluster
-    $(printf "env AWS_ACCESS_KEY_ID=%s AWS_SECRET_ACCESS_KEY=%s AWS_SESSION_TOKEN=%s" \
-    $(aws sts assume-role \
-    --role-arn ${role_arn} \
-    --role-session-name ${role_session_name:-EKSAssumeRoleSession} \
-    --query "Credentials.[AccessKeyId,SecretAccessKey,SessionToken]" \
-    --output text)) aws eks update-kubeconfig --region ${region} --name ${cluster_name} --role-arn ${role_arn}
+
+    if [ -n "${web_identity_token}" ]; then
+      echo "proceed with assume-role-with-web-identity to set up kubeconfig."
+      web_identity_file=$(mktemp /tmp/aws_web_identity_token.XXXXXX)
+      echo "${web_identity_token}" > "${web_identity_file}"
+      chmod 600 "${web_identity_file}"
+
+      $(printf "env AWS_ACCESS_KEY_ID=%s AWS_SECRET_ACCESS_KEY=%s AWS_SESSION_TOKEN=%s" \
+      $(aws sts assume-role-with-web-identity \
+      --role-arn ${role_arn} \
+      --role-session-name ${role_session_name:-EKSAssumeRoleSession} \
+      --web-identity-token file://${web_identity_file} \
+      --query "Credentials.[AccessKeyId,SecretAccessKey,SessionToken]" \
+      --output text)) aws eks update-kubeconfig --region ${region} --name ${cluster_name} --role-arn ${role_arn}
+
+      rm -f "${web_identity_file}"
+    else
+      # `aws eks update-kubeconfig --role-arn` only populates the `role-arn` to be used
+      # for `get-token`, and the role specified is not used for the initial describe cluster action
+      # name-based discovery is limited to same account as whatever profile is being used.
+      # additional functionality added to assume the same specified role in order to discover the cluster
+      $(printf "env AWS_ACCESS_KEY_ID=%s AWS_SECRET_ACCESS_KEY=%s AWS_SESSION_TOKEN=%s" \
+      $(aws sts assume-role \
+      --role-arn ${role_arn} \
+      --role-session-name ${role_session_name:-EKSAssumeRoleSession} \
+      --query "Credentials.[AccessKeyId,SecretAccessKey,SessionToken]" \
+      --output text)) aws eks update-kubeconfig --region ${region} --name ${cluster_name} --role-arn ${role_arn}
+    fi
 
     # assumed role credentail will **NOT** be persisted on the disk
   elif [ "${use_user_base_auth}" = true ]; then

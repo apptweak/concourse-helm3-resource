@@ -68,6 +68,7 @@ resource_types:
 -   `aws.profile` _Optional._ Name of the AWS profile to store/use credentials, defaults to `default`. Only used for non-role based authentication
 -   `aws.role.arn` _Optional._ ARN of the role to be used for EKS authentication
 -   `aws.role.session_name` _Optional._ Session name of the assume-role session
+-   `aws.role.web_identity_token` _Optional._ Web identity JWT token for OIDC federation (uses `assume-role-with-web-identity`)
 -   `aws.user.access_key_id` _Optional._ Access key id of the user credential used for EKS authentication
 -   `aws.user.secret_access_key` _Optional._ Secret access key of the user credential used for EKS authentication
 -   `aws.user.role_arn` _Optional._ If this is provided, we will use the user credentials to assume into the role
@@ -89,6 +90,7 @@ Deploy an helm chart
 -   `private_registry.ecr.profile` _Optional._ Name of the AWS profile to store/use credentials, defaults to `default`. Only used for non-role based authentication.
 -   `private_registry.ecr.role.arn`: _Optional._ AWS IAM role ARN to be used to authenticate with ECR `helm` registry.
 -   `private_registry.ecr.role.session_name`: _Optional._ AWS assume role session name for authenticating with ECR `helm` registry.
+-   `private_registry.ecr.role.web_identity_token`: _Optional._ Web identity JWT token for authenticating with ECR `helm` registry via OIDC federation.
 -   `private_registry.ecr.user.access_key_id` _Optional._ Access key id of the user credential used for ECR `helm` registry authentication
 -   `private_registry.ecr.user.secret_access_key` _Optional._ Secret access key of the user credential used for ECR `helm` registry authentication
 -   `chart`: _Required._ Either the file containing the helm chart to deploy (ends with .tgz), the path to a local directory containing the chart or the name of the chart from a repo (e.g. `stable/mysql`).
