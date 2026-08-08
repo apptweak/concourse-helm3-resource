@@ -1,4 +1,4 @@
-FROM --platform=linux/amd64 alpine/helm:3.16.4
+FROM alpine/helm:3.18.6
 # Helm supported version along with K8 version: https://helm.sh/docs/topics/version_skew/
 # List of Helm images: https://hub.docker.com/r/alpine/helm/tags
 
@@ -7,11 +7,11 @@ LABEL org.opencontainers.image.description="Kubernetes & Helm Resource for Conco
 
 # Versions for gcloud, kubectl, doctl, awscli
 # K8 versions: https://kubernetes.io/releases/
-ARG KUBERNETES_VERSION=1.31.7
+ARG KUBERNETES_VERSION=1.36.3
 # gcloud version: https://cloud.google.com/sdk/docs/release-notes
 ARG GCLOUD_VERSION=500.0.0
 ARG DOCTL_VERSION=1.57.0
-ARG AWSCLI_VERSION=2.13.25-r0
+ARG AWSCLI_VERSION=2.35.24-r0
 ARG HELM_PLUGINS_TO_INSTALL="https://github.com/databus23/helm-diff"
 
 
@@ -27,7 +27,10 @@ RUN apk add --update --upgrade --no-cache \
         gettext \
         libintl \
         python3 \
-        py3-pip \
+        py3-pip; \
+    apk add --no-cache \
+        --repository=https://dl-cdn.alpinelinux.org/alpine/edge/main \
+        --repository=https://dl-cdn.alpinelinux.org/alpine/edge/community \
         aws-cli=${AWSCLI_VERSION};
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]

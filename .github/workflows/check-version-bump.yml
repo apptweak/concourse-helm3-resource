@@ -44,18 +44,21 @@ jobs:
         id: get_version
         run: echo "version=$(cat VERSION)" >> $GITHUB_OUTPUT
 
-      - name: 'Get Previous tag'
+      - name: Get version from target branch
         if: steps.changed-files.outputs.all_modified_files_count != '0'
-        id: previoustag
-        uses: "WyriHaximus/github-action-get-previous-tag@v1.4.0"
+        id: get_base_version
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          echo "version=$(git show "${BASE_SHA}:VERSION")" >> "$GITHUB_OUTPUT"
 
       - name: Checking for version bump
         if: steps.changed-files.outputs.all_modified_files_count != '0'
         id: check_vbump
         run: |
-          LAST_TAG="${{ steps.previoustag.outputs.tag }}"
+          LAST_TAG="v${{ steps.get_base_version.outputs.version }}"
           NEW_TAG="v${{ steps.get_version.outputs.version }}"
-          RESULT=$(ci/assets/checksemver.sh ${NEW_TAG} ${LAST_TAG})
+          RESULT=$(ci/assets/checksemver.sh "${NEW_TAG}" "${LAST_TAG}")
           echo "============================================"
           if [ "${RESULT}" == "1" ]; then
             echo "Version bump found."
