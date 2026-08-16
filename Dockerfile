@@ -1,4 +1,4 @@
-FROM --platform=linux/amd64 alpine/helm:3.16.4
+FROM --platform=linux/amd64 alpine/helm:3.19.0
 # Helm supported version along with K8 version: https://helm.sh/docs/topics/version_skew/
 # List of Helm images: https://hub.docker.com/r/alpine/helm/tags
 
@@ -10,7 +10,6 @@ ARG KUBERNETES_VERSION=1.31.7
 # gcloud version: https://cloud.google.com/sdk/docs/release-notes
 ARG GCLOUD_VERSION=500.0.0
 ARG DOCTL_VERSION=1.57.0
-ARG AWSCLI_VERSION=2.13.25-r0
 ARG HELM_PLUGINS_TO_INSTALL="https://github.com/databus23/helm-diff"
 
 
@@ -18,18 +17,20 @@ ARG HELM_PLUGINS_TO_INSTALL="https://github.com/databus23/helm-diff"
 ENV PATH $PATH:/usr/local/gcloud/google-cloud-sdk/bin
 
 #install packages
-RUN apk add --update --upgrade --no-cache jq bash curl git gettext libintl py-pip
+RUN apk add --update --upgrade --no-cache jq bash curl git gettext libintl py-pip aws-cli && \
+    apk add --no-cache --virtual .build-deps gcc musl-dev python3-dev libffi-dev openssl-dev cargo make && \
+    pip install --break-system-packages --upgrade pip && \
+    pip install --break-system-packages azure-cli && \
+    apk del .build-deps
 
-#install kubectl
-RUN curl -sL -o /usr/local/bin/kubectl https://storage.googleapis.com/kubernetes-release/release/v${KUBERNETES_VERSION}/bin/linux/amd64/kubectl; \
-    chmod +x /usr/local/bin/kubectl
+#install kubectl (dl.k8s.io — storage.googleapis.com/kubernetes-release no longer hosts releases)
+RUN curl -fsSL -o /usr/local/bin/kubectl "https://dl.k8s.io/release/v${KUBERNETES_VERSION}/bin/linux/amd64/kubectl" && \
+    chmod +x /usr/local/bin/kubectl && \
+    kubectl version --client --output=yaml
 
 #install gcloud
 RUN wget https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-sdk-${GCLOUD_VERSION}-linux-x86_64.tar.gz \
     -O /tmp/google-cloud-sdk.tar.gz | bash
-
-#install awscli
-RUN pip install awscli==${AWSCLI_VERSION}
 
 # For use with gke-gcloud-auth-plugin below
 # see https://cloud.google.com/blog/products/containers-kubernetes/kubectl-auth-changes-in-gke
