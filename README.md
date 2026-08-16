@@ -69,9 +69,22 @@ resource_types:
 -   `aws.role.arn` _Optional._ ARN of the role to be used for EKS authentication
 -   `aws.role.session_name` _Optional._ Session name of the assume-role session
 -   `aws.role.web_identity_token` _Optional._ Web identity JWT token for OIDC federation (uses `assume-role-with-web-identity`)
+-   `aws.role.external_id` _Optional._ External ID to use when assuming the role (for enhanced security)
 -   `aws.user.access_key_id` _Optional._ Access key id of the user credential used for EKS authentication
 -   `aws.user.secret_access_key` _Optional._ Secret access key of the user credential used for EKS authentication
 -   `aws.user.role_arn` _Optional._ If this is provided, we will use the user credentials to assume into the role
+-   `aws.user.external_id` _Optional._ External ID to use when assuming the role (for enhanced security)
+
+## Source options for Azure AKS
+
+-   `azure.subscription_id` _Optional._ Azure subscription ID where the AKS cluster is located
+-   `azure.resource_group` _Optional._ Resource group containing the AKS cluster
+-   `azure.cluster_name` _Optional._ Name of the AKS cluster
+-   `azure.service_principal.tenant_id` _Optional._ Azure AD tenant ID for service principal authentication
+-   `azure.service_principal.client_id` _Optional._ Service principal client ID (application ID)
+-   `azure.service_principal.client_secret` _Optional._ Service principal client secret
+
+**Note:** If `azure.service_principal` is not provided, the resource will attempt to use managed identity authentication (useful when Concourse workers are running in Azure).
 
 ## Behavior
 
@@ -227,6 +240,7 @@ resources:
       role:
         arn: arn:aws:iam::<aws_account_id>:role/<my_eks_role>
         session_name: EKSAssumeRoleSession
+        external_id: my-external-id  # Optional: for enhanced security
 ```
 
 Amazon EKS using user
@@ -242,6 +256,37 @@ resources:
       user:
         access_key_id: <access_key_id>
         secret_access_key: <secret_access_key>
+        role_arn: arn:aws:iam::<aws_account_id>:role/<role_to_assume>  # Optional
+        external_id: my-external-id  # Optional: required if role requires external_id
+```
+
+Azure AKS using service principal
+```yaml
+resources:
+- name: myapp-helm
+  type: helm
+  source:
+    azure:
+      subscription_id: <azure_subscription_id>
+      resource_group: <resource_group_name>
+      cluster_name: <aks_cluster_name>
+      service_principal:
+        tenant_id: <azure_ad_tenant_id>
+        client_id: <service_principal_client_id>
+        client_secret: <service_principal_client_secret>
+```
+
+Azure AKS using managed identity
+```yaml
+resources:
+- name: myapp-helm
+  type: helm
+  source:
+    azure:
+      subscription_id: <azure_subscription_id>
+      resource_group: <resource_group_name>
+      cluster_name: <aks_cluster_name>
+    # No service_principal block - will use managed identity of the Concourse worker
 ```
 
 Add to job:

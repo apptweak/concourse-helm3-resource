@@ -1,4 +1,4 @@
-FROM alpine/helm:3.18.6
+FROM alpine/helm:3.19.0
 # Helm supported version along with K8 version: https://helm.sh/docs/topics/version_skew/
 # List of Helm images: https://hub.docker.com/r/alpine/helm/tags
 
@@ -32,13 +32,18 @@ RUN apk add --update --upgrade --no-cache \
     apk add --no-cache \
         --repository=https://dl-cdn.alpinelinux.org/alpine/edge/main \
         --repository=https://dl-cdn.alpinelinux.org/alpine/edge/community \
-        aws-cli=${AWSCLI_VERSION};
+        aws-cli=${AWSCLI_VERSION}; \
+    apk add --no-cache --virtual .build-deps gcc musl-dev python3-dev libffi-dev openssl-dev cargo make && \
+    pip install --break-system-packages --upgrade pip && \
+    pip install --break-system-packages azure-cli && \
+    apk del .build-deps
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
-#install kubectl
-RUN curl -sL -o /usr/local/bin/kubectl https://storage.googleapis.com/kubernetes-release/release/v${KUBERNETES_VERSION}/bin/linux/amd64/kubectl; \
-    chmod +x /usr/local/bin/kubectl;
+#install kubectl (dl.k8s.io — storage.googleapis.com/kubernetes-release no longer hosts releases)
+RUN curl -fsSL -o /usr/local/bin/kubectl "https://dl.k8s.io/release/v${KUBERNETES_VERSION}/bin/linux/amd64/kubectl" && \
+    chmod +x /usr/local/bin/kubectl && \
+    kubectl version --client --output=yaml
 
 #install gcloud
 # RUN wget https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-sdk-${GCLOUD_VERSION}-linux-x86_64.tar.gz \
