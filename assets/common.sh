@@ -160,8 +160,15 @@ setup_aws_kubernetes() {
       # for `get-token`, and the role specified is not used for the initial describe cluster action
       # name-based discovery is limited to same account as whatever profile is being used.
       # additional functionality added to assume the same specified role in order to discover the cluster
-      # Session is intentionally not exported: later get-token --role-arn uses ambient
-      # identity (typically the Concourse worker instance profile).
+      #
+      # Session is intentionally not exported into the process environment:
+      # kubeconfig keeps --role-arn, so later helm/kubectl run
+      # `aws eks get-token --role-arn …` using the ambient identity (typically
+      # the Concourse worker instance profile), which must be allowed to assume
+      # role_arn. Exporting the temporary session would make get-token try to
+      # assume role_arn from that session (role chaining / self-assume), which
+      # fails unless the role trusts itself. Credentials are also not written
+      # to disk (same as upstream role-based auth).
       $(printf "env AWS_ACCESS_KEY_ID=%s AWS_SECRET_ACCESS_KEY=%s AWS_SESSION_TOKEN=%s" \
       $(aws sts assume-role \
       --role-arn ${role_arn} \
@@ -171,7 +178,8 @@ setup_aws_kubernetes() {
       --output text)) aws eks update-kubeconfig --region ${region} --name ${cluster_name} --role-arn ${role_arn}
     fi
 
-    # assumed role credentials are not written to disk; web-identity exports them to the process env only
+    # Classic assume-role: no disk/env persistence (ambient identity for get-token).
+    # Web-identity: session exported to process env only (see branch above).
   elif [ "${use_user_base_auth}" = true ]; then
     echo "proceed with user credentials to set up kubeconfig."
 
