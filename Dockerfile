@@ -32,11 +32,7 @@ RUN apk add --update --upgrade --no-cache \
     apk add --no-cache \
         --repository=https://dl-cdn.alpinelinux.org/alpine/edge/main \
         --repository=https://dl-cdn.alpinelinux.org/alpine/edge/community \
-        aws-cli=${AWSCLI_VERSION}; \
-    apk add --no-cache --virtual .build-deps gcc musl-dev python3-dev libffi-dev openssl-dev cargo make && \
-    pip install --break-system-packages --upgrade pip && \
-    pip install --break-system-packages azure-cli && \
-    apk del .build-deps
+        aws-cli=${AWSCLI_VERSION};
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
