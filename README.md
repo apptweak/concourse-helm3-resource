@@ -69,9 +69,11 @@ resource_types:
 -   `aws.role.arn` _Optional._ ARN of the role to be used for EKS authentication
 -   `aws.role.session_name` _Optional._ Session name of the assume-role session
 -   `aws.role.web_identity_token` _Optional._ Web identity JWT token for OIDC federation (uses `assume-role-with-web-identity`)
+-   `aws.role.external_id` _Optional._ External ID to use when assuming the role (for enhanced security)
 -   `aws.user.access_key_id` _Optional._ Access key id of the user credential used for EKS authentication
 -   `aws.user.secret_access_key` _Optional._ Secret access key of the user credential used for EKS authentication
 -   `aws.user.role_arn` _Optional._ If this is provided, we will use the user credentials to assume into the role
+-   `aws.user.external_id` _Optional._ External ID to use when assuming the role (for enhanced security)
 
 ## Behavior
 

@@ -115,11 +115,18 @@ setup_aws_kubernetes() {
     role_arn=$(jq -r '.source.aws.role.arn // ""' < $payload)
     role_session_name=$(jq -r '.source.aws.role.session_name // ""' < $payload)
     web_identity_token=$(jq -r '.source.aws.role.web_identity_token // ""' < $payload)
+    role_external_id=$(jq -r '.source.aws.role.external_id // ""' < $payload)
 
     echo "role_arn=${role_arn} role_session_name=${role_session_name}"
     if [ -z "${role_arn}" ]; then
       echo "invalid role arn for AWS EKS"
       exit 1
+    fi
+
+    # Build external_id parameter if provided (assume-role path only)
+    external_id_opt=""
+    if [ -n "$role_external_id" ]; then
+      external_id_opt="--external-id ${role_external_id}"
     fi
 
     if [ -n "${web_identity_token}" ]; then
@@ -146,6 +153,7 @@ setup_aws_kubernetes() {
       $(aws sts assume-role \
       --role-arn ${role_arn} \
       --role-session-name ${role_session_name:-EKSAssumeRoleSession} \
+      ${external_id_opt} \
       --query "Credentials.[AccessKeyId,SecretAccessKey,SessionToken]" \
       --output text)) aws eks update-kubeconfig --region ${region} --name ${cluster_name} --role-arn ${role_arn}
     fi
@@ -157,6 +165,7 @@ setup_aws_kubernetes() {
     access_key_id=$(jq -r '.source.aws.user.access_key_id // ""' < $payload)
     secret_access_key=$(jq -r '.source.aws.user.secret_access_key // ""' < $payload)
     role_arn=$(jq -r '.source.aws.user.role_arn // ""' < $payload)
+    user_external_id=$(jq -r '.source.aws.user.external_id // ""' < $payload)
 
     if [ -z "$access_key_id" ] || [ -z "$secret_access_key" ]; then
       echo "invalid user auth payload for AWS EKS, please pass all required params"
@@ -176,6 +185,11 @@ setup_aws_kubernetes() {
       echo "[assume_role]
       role_arn=${role_arn}
       source_profile=${profile:-default}" >> ~/.aws/credentials
+
+      # Add external_id to the profile if provided
+      if [ -n "$user_external_id" ]; then
+        echo "    external_id=${user_external_id}" >> ~/.aws/credentials
+      fi
 
       aws eks update-kubeconfig --region ${region} --name ${cluster_name} --profile assume_role
     else
