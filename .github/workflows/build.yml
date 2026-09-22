@@ -14,8 +14,7 @@ on:
         required: true
         type: string
 
-# Dual-publish during migration: GHCR (legacy) + ECR (canonical target).
-# ECR push uses GitHub OIDC → github-oidc-concourse-helm3-resource-ecr-push (no static AWS keys).
+# Publish to Ops ECR via GitHub OIDC → github-oidc-concourse-helm3-resource-ecr-push (no static AWS keys).
 env:
   AWS_REGION: eu-west-1
   AWS_ROLE_ARN: arn:aws:iam::362072154386:role/github-oidc-concourse-helm3-resource-ecr-push
@@ -27,18 +26,10 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      packages: write
       id-token: write
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
-      - name: Log in to GHCR
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -55,7 +46,5 @@ jobs:
           context: .
           push: true
           tags: |
-            ghcr.io/apptweak/${{ env.IMAGE_NAME }}:${{ inputs.tag }}
-            ghcr.io/apptweak/${{ env.IMAGE_NAME }}:stable
             ${{ env.ECR_REGISTRY }}/${{ env.IMAGE_NAME }}:${{ inputs.tag }}
             ${{ env.ECR_REGISTRY }}/${{ env.IMAGE_NAME }}:stable
