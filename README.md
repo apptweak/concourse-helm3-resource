@@ -18,27 +18,30 @@ Heavily based on the work of [`linkyard/concourse-helm-resource`](https://github
 
 ## Docker Image
 
-You can pull the resource image from [`apptweakci/helm3-resource`][dockerhub]. !["Dockerhub Pull Badge"](https://img.shields.io/docker/pulls/apptweakci/helm3-resourcee.svg "Dockerhub Pull Badge")
+Canonical registry is **Ops ECR** (published from branch `main-apptweak` via GitHub Actions + OIDC):
 
-[Orignal dockerhub]: https://hub.docker.com/repository/docker/apptweakci/helm3-resourcee
+`362072154386.dkr.ecr.eu-west-1.amazonaws.com/concourse-helm3-resource`
 
-### DEPRECATION OF DOCKER HUB
+Legacy locations (no longer published):
 
-Starting with version 1.25.0, can you can no longer pull this resource from Docker Hub.
-
-Starting with version 1.32.0, you can pull the resource from GitHub [`ghcr.io/apptweak/concourse-helm3-resource`][GitHub Packages]. Docker hub will eventually stop receiving new images.
+- GHCR: [`ghcr.io/apptweak/concourse-helm3-resource`][github packages]
+- Docker Hub: [`apptweakci/helm3-resource`][Orignal dockerhub]
 
 [github packages]: https://github.com/apptweak/concourse-helm3-resource/pkgs/container/concourse-helm3-resource
+[Orignal dockerhub]: https://hub.docker.com/repository/docker/apptweakci/helm3-resourcee
 
 ## Usage
 
 ```yaml
 resource_types:
 - name: helm
-  type: docker-image
+  type: registry-image
   source:
-    repository: ghcr.io/apptweak/concourse-helm3-resource
+    repository: 362072154386.dkr.ecr.eu-west-1.amazonaws.com/concourse-helm3-resource
+    tag: v1.43.0
 ```
+
+Pulling the resource-type image from private ECR requires registry credentials on the `resource_types.helm` source (or an equivalent Concourse ECR auth path). Application chart/ECR deploy auth is separate from this image pull.
 
 ## Source Configuration
 
