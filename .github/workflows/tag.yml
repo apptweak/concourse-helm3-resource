@@ -15,6 +15,7 @@ on:
 permissions:
   contents: write
   packages: write
+  id-token: write
 
 jobs:
   tag:
@@ -25,7 +26,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          fetch-depth: 150
       - name: Resolve release version
         id: version
         env:
