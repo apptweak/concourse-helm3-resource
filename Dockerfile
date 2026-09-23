@@ -11,7 +11,9 @@ ARG KUBERNETES_VERSION=1.36.3
 # gcloud version: https://cloud.google.com/sdk/docs/release-notes
 ARG GCLOUD_VERSION=500.0.0
 ARG DOCTL_VERSION=1.57.0
-ARG AWSCLI_VERSION=2.35.24-r0
+# Pin to Alpine v3.22 community (matches alpine/helm:3.19.0). Avoid alpine/edge:
+# edge aws-cli now requires python3~3.14 while the base image ships python3 3.12.
+ARG AWSCLI_VERSION=2.27.25-r0
 ARG HELM_DIFF_VERSION=v3.9.14
 ARG HELM_PLUGINS_TO_INSTALL="https://github.com/databus23/helm-diff"
 
@@ -28,10 +30,7 @@ RUN apk add --update --upgrade --no-cache \
         gettext \
         libintl \
         python3 \
-        py3-pip; \
-    apk add --no-cache \
-        --repository=https://dl-cdn.alpinelinux.org/alpine/edge/main \
-        --repository=https://dl-cdn.alpinelinux.org/alpine/edge/community \
+        py3-pip \
         aws-cli=${AWSCLI_VERSION};
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
